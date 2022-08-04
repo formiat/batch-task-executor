@@ -2,16 +2,29 @@ use std::fmt::Debug;
 
 const THRESHOLD: usize = 3;
 
-/// TODO: Remove `Clone` requirement for `T`
+fn consuming_chunks<T>(input: Vec<T>, chunk_size: usize) -> Vec<Vec<T>> {
+    let mut res = Vec::with_capacity((input.len() / chunk_size) + 1);
+    res.push(Vec::with_capacity(chunk_size));
+
+    for item in input {
+        if res.last().unwrap().len() >= chunk_size {
+            res.push(Vec::with_capacity(chunk_size));
+        }
+
+        res.last_mut().unwrap().push(item);
+    }
+
+    res
+}
+
 pub async fn batch_executor<T, U, F>(input: Vec<T>, func: F) -> Vec<U>
 where
-    T: Clone + Debug + Send + 'static,
+    T: Debug + Send + 'static,
     U: Debug + Send + 'static,
     F: Fn(T) -> U + Copy + Send + 'static,
 {
     if input.len() > THRESHOLD {
-        // TODO: Replace with consuming `chunks`. Remove `v.to_vec()` call
-        let inputs: Vec<Vec<_>> = input.chunks(THRESHOLD).map(|v| v.to_vec()).collect();
+        let inputs = consuming_chunks(input, THRESHOLD);
         println!("inputs: {:#?}", inputs);
 
         let futures: Vec<_> = inputs
